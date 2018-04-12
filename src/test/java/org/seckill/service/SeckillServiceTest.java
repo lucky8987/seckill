@@ -1,15 +1,16 @@
 package org.seckill.service;
 
-import com.sun.deploy.util.SyncFileAccess;
 import java.util.Random;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
-import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.seckill.dto.Exposer;
-import org.seckill.exception.SeckillCloseException;
+import org.seckill.forkJoin.SeckillTask;
+import org.seckill.forkJoin.WorkThreadFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -27,15 +28,34 @@ public class SeckillServiceTest {
         Assert.assertEquals(exposer.getMd5(), service.getMd5(1000));
     }
 
-    @Test(expected = SeckillCloseException.class)
+    @Test
     public void executeSeckill() {
-        ThreadGroup threadGroup = new ThreadGroup("executeSeckill");
-        for (int i = 0; i < 10; i++) {
+        ExecutorService threadPool = Executors.newFixedThreadPool(200);
+        for (int i = 0; i < 10000; i++) {
             // 模拟并发秒杀
-            new Thread(threadGroup,() -> {
-                service.executeSeckill(1000, service.getMd5(1000), Long.valueOf("137".concat(String.format("%18d", new Random().nextInt(200)))));
-            }).start();
+            threadPool.execute(() -> {
+                service.executeSeckill(1000, service.getMd5(1000), Long.valueOf("137".concat(String.format("%08d", new Random().nextInt(99999999)))));
+            });
         }
-        while (threadGroup.activeCount() > 1);
+        threadPool.shutdown();
+        while (true) {
+            if (threadPool.isTerminated()) {
+                return;
+            }
+        }
+    }
+
+    @Test
+    public void forkJoinSeckillTest() {
+        ForkJoinPool pool = new ForkJoinPool(200, new WorkThreadFactory(), null, false);
+        SeckillTask task = new SeckillTask(service, 0, 10000);
+        pool.execute(task);
+        task.join();
+        pool.shutdown();
+        while (true) {
+            if (pool.isTerminated()) {
+                return;
+            }
+        }
     }
 }
