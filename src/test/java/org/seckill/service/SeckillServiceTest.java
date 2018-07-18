@@ -46,16 +46,12 @@ public class SeckillServiceTest {
     }
 
     @Test
-    public void forkJoinSeckillTest() {
+    public void forkJoinSeckillTest() throws InterruptedException {
         ForkJoinPool pool = new ForkJoinPool(200, new WorkThreadFactory(), null, false);
         SeckillTask task = new SeckillTask(service, 0, 10000);
         pool.execute(task);
         task.join();
         pool.shutdown();
-        while (true) {
-            if (pool.isTerminated()) {
-                return;
-            }
-        }
+        pool.awaitTermination(1, TimeUnit.HOURS);
     }
 }

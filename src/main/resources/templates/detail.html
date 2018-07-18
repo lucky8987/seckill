@@ -2,7 +2,7 @@
 <html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head th:include="common/head.html">
     <title>秒杀详情页</title>
-    <script src="../static/js/seckill.js"></script>
+    <script th:src="@{/js/seckill.js}"></script>
 </head>
 <body>
 <input type="hidden" id="basePath" value="${basePath}" />
